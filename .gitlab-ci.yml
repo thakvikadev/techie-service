@@ -1,0 +1,329 @@
+image: $JFROG_REGISTRY/docker/docker:latest
+
+stages:
+  - sonar-scan
+  - frogbot-scan
+  - build
+  - image-scan
+  - deploy
+  - build-scan
+  - promote
+  - trigger
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: '/certs'
+  JF_PLATFORM_REPO: 'hrms-approval-service-npm-dev'
+  JF_BUILD_NAME: '@hrms:approval'
+  JF_BUILD_NUMBER: $CI_PIPELINE_ID
+  NPM_TOKEN: $JF_ACCESS_TOKEN
+  CONTAINER_IMAGE: leave
+  CONTAINER_RELEASE_IMAGE: $JFROG_REGISTRY/$JF_REGISTRY_REPO/$CONTAINER_IMAGE:$CI_COMMIT_TAG
+  CONTAINER_DEV_IMAGE: $JFROG_REGISTRY/$JF_REGISTRY_REPO/$CONTAINER_IMAGE:latest
+  CONTAINER_UAT_IMAGE: $JFROG_REGISTRY/$JF_REGISTRY_REPO/$CONTAINER_IMAGE:$CI_COMMIT_SHORT_SHA
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+      variables:
+        SCAN_PULL_REQUEST: true
+        RUNNER_TAG: 'hrms'
+    - if: $CI_COMMIT_BRANCH == 'develop' || $CI_COMMIT_BRANCH == 'master' || $CI_COMMIT_BRANCH == 'release'
+      variables:
+        SCAN_PULL_REQUEST: true
+        RUNNER_TAG: 'hrms'
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_PIPELINE_SOURCE == "schedule"
+      variables:
+        RUNNER_TAG: 'hrms'
+    - if: $CI_COMMIT_BRANCH == "development"
+      variables:
+        JF_BUILD_NUMBER: $CI_PIPELINE_ID
+        CONTAINER_IMAGE_TAG: $CONTAINER_DEV_IMAGE
+        RUNNER_TAG: 'hrms-bn-csz-uat'
+    - if: $CI_COMMIT_BRANCH == "testing"
+      variables:
+        JF_BUILD_NUMBER: $CI_COMMIT_SHORT_SHA
+        CONTAINER_IMAGE_TAG: $CONTAINER_UAT_IMAGE
+        RUNNER_TAG: 'hrms-bn-csz-uat'
+    - if: $CI_COMMIT_TAG != null
+      variables:
+        JF_BUILD_NUMBER: $CI_COMMIT_TAG
+        CONTAINER_IMAGE_TAG: $CONTAINER_RELEASE_IMAGE
+        RUNNER_TAG: 'hrms'
+
+before_script:
+  # Set the scope @ababank npm registry with an Artifactory npm repository
+  - echo @ababank:registry=https://$JF_SERVER_HOST/artifactory/api/npm/hrms-npm-dev/ >> .npmrc
+  # Add the token for the scoped packages URL. This will allow you to download
+  - echo "//$JF_SERVER_HOST/artifactory/api/npm/hrms-npm-dev/:_authToken=${NPM_TOKEN}" >>.npmrc
+  # Set the default npm registry with an Artifactory npm repository
+  - echo registry=https://$JF_SERVER_HOST/artifactory/api/npm/$JF_PLATFORM_REPO/ >> .npmrc
+  # Add the token for the default packages URL. This will allow you to download
+  - echo "//$JF_SERVER_HOST/artifactory/api/npm/$JF_PLATFORM_REPO/:_authToken=${NPM_TOKEN}" >>.npmrc
+
+sonar-scan:
+  rules:
+    - if: $SCAN_PULL_REQUEST != null
+  stage: sonar-scan
+  image:
+    name: $JFROG_REGISTRY/docker/sonar-scanner-cli:latest
+  tags:
+    - '$RUNNER_TAG'
+  variables:
+    # Defines the location of the analysis task cache
+    SONAR_USER_HOME: '${CI_PROJECT_DIR}/.sonar'
+    # Tells git to fetch all the branches of the project, required by the analysis task
+    GIT_DEPTH: 0
+  script:
+    # Config jf npm install
+    - npm install
+    # Run unit test
+    - npm run test:cov
+    # Sonarqube Scanning
+    - sonar-scanner -Dsonar.qualitygate.wait=true
+
+frogbot-scan:
+  stage: frogbot-scan
+  image:
+    name: $JFROG_REGISTRY/docker/node:latest
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+      variables:
+        FROGBOT_CMD: 'scan-pull-request'
+        JF_GIT_BASE_BRANCH: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+        # Repository scanning is triggered by any push to the default branch.
+        # If you'd like a different branch to be scanned, replace $CI_DEFAULT_BRANCH in the line below with the name of branch, wrapped with quotes (").
+        CI_COMMIT_REF_NAME: $CI_COMMIT_BRANCH
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_PIPELINE_SOURCE == "schedule"
+      variables:
+        FROGBOT_CMD: 'create-fix-pull-requests'
+        JF_GIT_BASE_BRANCH: $CI_COMMIT_BRANCH
+  tags:
+    - '$RUNNER_TAG'
+  variables:
+    # [Mandatory]
+    # GitLab access token with the following permissions scopes: api, read_api, read_user, read_repository
+    JF_GIT_TOKEN: $USER_ACCESS_TOKEN
+
+    # Predefined GitLab variables. There's no need to set them.
+    JF_GIT_PROVIDER: gitlab
+    JF_GIT_OWNER: $CI_PROJECT_NAMESPACE
+    JF_GIT_REPO: $CI_PROJECT_NAME
+    JF_GIT_PULL_REQUEST_ID: $CI_MERGE_REQUEST_IID
+
+    # [Optional, default: https://gitlab.com]
+    # API endpoint to GitLab
+    JF_GIT_API_ENDPOINT: $CI_SERVER_URL
+    JF_WATCHES: 'watch-high'
+    JF_FAIL: 'TRUE'
+  before_script:
+    # Configure Artifactory server
+    - jf config add $JFROG_PLATFORM_SERVER_ID --url=$JF_URL --user=$JF_USER --access-token=$JF_ACCESS_TOKEN
+    # Configure npm, set upload and download repositories
+    - jf npm-config --repo-resolve $JF_PLATFORM_REPO --repo-deploy $JF_PLATFORM_REPO
+  script:
+    # For Linux / MacOS runner:
+    - frogbot ${FROGBOT_CMD}
+
+build:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "development" || $CI_COMMIT_BRANCH == "testing" || $CI_COMMIT_TAG != null
+  stage: build
+  tags:
+    - '$RUNNER_TAG'
+  script:
+    # Docker Information
+    - docker info
+    # Log into Docker Registry
+    - docker login -u $JF_USER -p $JF_ACCESS_TOKEN $JFROG_REGISTRY
+    #  Build Docker Image
+    - docker build --pull -t $CONTAINER_IMAGE_TAG
+      --build-arg JF_SERVER_HOST=$JF_SERVER_HOST
+      --build-arg JFROG_REGISTRY=$JFROG_REGISTRY
+      --build-arg JF_PLATFORM_REPO=$JF_PLATFORM_REPO
+      --build-arg JF_ACCESS_TOKEN=$JF_ACCESS_TOKEN .
+  after_script:
+    - docker logout
+
+image-scan:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "development" || $CI_COMMIT_BRANCH == "testing" || $CI_COMMIT_TAG != null
+  stage: image-scan
+  tags:
+    - '$RUNNER_TAG'
+  needs:
+    - 'build'
+  before_script:
+    # Configure Artifactory server
+    - jf config add $JFROG_PLATFORM_SERVER_ID
+      --url=$JF_URL
+      --user=$JF_USER
+      --access-token=$JF_ACCESS_TOKEN
+  script:
+    # Show All Available Images
+    - echo Scanning Docker Image - "$CONTAINER_IMAGE_TAG"
+    # jFrog Scan Docker Image
+    - jf docker scan "$CONTAINER_IMAGE_TAG"
+      --watches=watch-all-severities
+
+deploy:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "development" || $CI_COMMIT_BRANCH == "testing" || $CI_COMMIT_TAG != null
+  stage: deploy
+  tags:
+    - '$RUNNER_TAG'
+  needs:
+    - image-scan
+  before_script:
+    # Configure Artifactory server
+    - jf config add $JFROG_PLATFORM_SERVER_ID
+      --url=$JF_URL
+      --user=$JF_USER
+      --access-token=$JF_ACCESS_TOKEN
+  script:
+    # Docker push
+    - jf docker push $CONTAINER_IMAGE_TAG
+      --build-name=$JF_BUILD_NAME
+      --build-number=$JF_BUILD_NUMBER
+      --project $JF_PROJECT_KEY
+    # Collect the environment variables
+    - jf rt bce $JF_BUILD_NAME $JF_BUILD_NUMBER
+      --project $JF_PROJECT_KEY
+    # Pass the build information to Artifactory
+    - jf rt bp $JF_BUILD_NAME $JF_BUILD_NUMBER
+      --project $JF_PROJECT_KEY
+  after_script:
+    - docker logout
+
+build-scan:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "development" || $CI_COMMIT_BRANCH == "testing" || $CI_COMMIT_TAG != null
+  stage: build-scan
+  needs:
+    - 'deploy'
+  tags:
+    - '$RUNNER_TAG'
+  before_script:
+    # Configure Artifactory server
+    - jf config add $JFROG_PLATFORM_SERVER_ID
+      --url=$JF_URL
+      --user=$JF_USER
+      --access-token=$JF_ACCESS_TOKEN
+  script:
+    # Scanning the docker build
+    - jf bs $JF_BUILD_NAME $JF_BUILD_NUMBER --project=$JF_PROJECT_KEY
+
+promote-uat:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "testing" || $CI_COMMIT_TAG != null
+  stage: promote
+  needs:
+    - job: 'deploy'
+  tags:
+    - '$RUNNER_TAG'
+  before_script:
+    # Configure Artifactory server
+    - jf config add $JFROG_PLATFORM_SERVER_ID
+      --url=$JF_URL
+      --user=$JF_USER
+      --access-token=$JF_ACCESS_TOKEN
+  script:
+    #Promote from Dev to UAT
+    - jf rt bpr --source-repo=$JFROG_REGISTRY_REPO_DEV
+      --status=UAT --copy
+      --props="status=UAT" $JF_BUILD_NAME $JF_BUILD_NUMBER
+      --project $JF_PROJECT_KEY $JF_REGISTRY_REPO_UAT
+
+promote-preprod:
+  rules:
+    - if: $CI_COMMIT_TAG != null
+      when: manual
+  stage: promote
+  needs:
+    - 'promote-uat'
+  tags:
+    - hrms
+  before_script:
+    # Configure Artifactory server
+    - jf config add $JFROG_PLATFORM_SERVER_ID
+      --url=$JF_URL
+      --user=$JF_USER
+      --access-token=$JF_ACCESS_TOKEN
+  script:
+    #Promote from UAT to PREPROD
+    - jf rt bpr --source-repo=$JF_REGISTRY_REPO_UAT
+      --status=PREPROD --copy
+      --props="status=PREPROD" $JF_BUILD_NAME $JF_BUILD_NUMBER
+      --project $JF_PROJECT_KEY $JF_REGISTRY_REPO_PREPROD
+
+promote-prod:
+  rules:
+    - if: $CI_COMMIT_TAG != null
+      when: manual
+      variables:
+        JF_BUILD_NUMBER: $CI_COMMIT_TAG
+  stage: promote
+  needs:
+    - 'promote-preprod'
+  tags:
+    - hrms
+  before_script:
+    # Configure Artifactory server
+    - jf config add $JFROG_PLATFORM_SERVER_ID
+      --url=$JF_URL
+      --user=$JF_USER
+      --access-token=$JF_ACCESS_TOKEN
+  script:
+    #Promote from UAT to PREPROD
+    - jf rt bpr --source-repo=$JF_REGISTRY_REPO_PREPROD
+      --status=PROD --copy
+      --props="status=PROD" $JF_BUILD_NAME $JF_BUILD_NUMBER
+      --project $JF_PROJECT_KEY $JF_REGISTRY_REPO_PROD
+
+trigger-deployment:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "testing"
+      variables:
+        GITOPS_COMMIT_BRANCH: 'testing'
+    - if: $CI_COMMIT_TAG != null
+      when: manual
+      variables:
+        GITOPS_COMMIT_BRANCH: 'main'
+  image:
+    name: $JFROG_REGISTRY/docker/docker:git
+  stage: trigger
+  needs:
+    - job: 'promote-uat'
+      optional: true
+    - job: 'promote-prod'
+      optional: true
+  tags:
+    - '$RUNNER_TAG'
+  variables:
+    GITOPS_REPOSITORY: https://$USERNAME:$USER_ACCESS_TOKEN@$CI_SERVER_HOST/ocp-gitops/hrms-gitops/hrms-backend.git
+    GITOPS_PROJECT_PATH: hrms-backend/hrms-approval
+    GITOPS_VERSION_TAG: leave_$JF_BUILD_NUMBER
+    GITOPS_APP_VERSION: $JF_BUILD_NUMBER
+    GITOPS_COMMIT_MESSAGE: 'Update Approval/Approval Service - Chart Version to $GITOPS_APP_VERSION'
+  before_script:
+    - git config --global user.email "$GITLAB_USER_EMAIL"
+    - git config --global user.name "$GITLAB_USER_NAME"
+  script:
+    - git clone --single-branch --branch "$GITOPS_COMMIT_BRANCH" "${GITOPS_REPOSITORY}"
+    - cd "${GITOPS_PROJECT_PATH}"
+    - sed -i "s/appVersion:.*/appVersion:\ ${GITOPS_APP_VERSION}/g" Chart.yaml
+    - git add .
+    - |-
+      if [ $(git status --porcelain | wc -l) != "0" ];  then
+        git commit -m "${GITOPS_COMMIT_MESSAGE}"
+        if [ $(git branch --show-current) != "main" ]; then
+          git push origin "$GITOPS_COMMIT_BRANCH"
+        else
+          git checkout -b $GITOPS_VERSION_TAG
+          git push -u origin $GITOPS_VERSION_TAG \
+            -o merge_request.create \
+            -o merge_request.title="${GITOPS_COMMIT_MESSAGE}" \
+            -o merge_request.remove_source_branch \
+            -o merge_request.target=$GITOPS_COMMIT_BRANCH
+        fi
+      fi

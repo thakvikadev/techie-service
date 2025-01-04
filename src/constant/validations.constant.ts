@@ -1,0 +1,11 @@
+export const VALIDATION_STRING = 'validations.string';
+export const VALIDATION_MAX_STRING = 'validations.max.string';
+export const VALIDATION_NOT_EMPTY = 'validations.not_empty';
+export const VALIDATION_BOOLEAN = 'validations.boolean';
+export const VALIDATION_UUID = 'validations.uuid';
+export const VALIDATION_ARRAY = 'validations.array';
+export const VALIDATION_MIN_ARRAY = 'validations.min.array';
+export const VALIDATION_DATE = 'validations.date';
+export const VALIDATION_IN = 'validations.in';
+export const VALIDATION_NUMERIC = 'validations.numeric';
+export const VALIDATION_MIN_NUMERIC = 'validations.min.numeric';

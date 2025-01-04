@@ -1,0 +1,68 @@
+{
+  "bad_request": "Bad Request.",
+  "not_found": "Not Found.",
+  "forbidden": "Forbidden resource or Resource not found.",
+  "no_change": "Your request to update has nothing change.",
+  "not_to_submit": "There is nothing to submit.",
+  "notifications": {
+    "subjects": {
+      "not_found": "There is no subject found!"
+    }
+  },
+  "approvals": {
+    "approved": "The Approval Request has already been approved.",
+    "rejected": "The Approval Request has already been rejected.",
+    "four_eyes": "The Approval Response has not been allowed because of FOUR EYES policy.",
+    "pending": "The Approval Request is Pending Approval.",
+    "before_effective": "Approval is not allowed to request before effective date.",
+    "canceled": "The Approval Request has already been cancelled.",
+    "only_rejected": "Approval Request's Resubmission is allowed for only Rejected."
+  },
+  "positions": {
+    "not_found": "The Position is not found.",
+    "using": "The Position has been using. You are not able to delete.",
+    "pending": "The Position is in the pending approval process. You cannot making change!",
+    "deactivated": "The Position has been already deactivated.",
+    "level_not_found": "The Position Level is not found.",
+    "batch_error_validation": "Please make sure every single tuple of the batch of positions is CORRECT before submitting."
+  },
+  "charts": {
+    "not_found": "The Organization Chart is not found.",
+    "node_not_found": "The Organization Chart Position is not found.",
+    "any_node_not_found": "The Position of The Organization Chart Positions is not found.",
+    "any_employee_not_found": "The Employee of The Organization Chart Employees is not found.",
+    "position_already_existed": "The position has already added.",
+    "position_not_found": "Position doesn't exist.",
+    "parent_not_found": "Direct Reports doesn't exist.",
+    "existed": "The Organization Chart Template match to provided classes has already existed."
+  },
+  "branches": {
+    "not_found": "The Branch is not found.",
+    "reports_not_existed": "The Regional/Provincial Branch does not exist.",
+    "reports_not_activated": "The Regional/Provincial Branch has not been activated yet.",
+    "already_created": "The Branch ({code}) has already been created.",
+    "deactivated": "The Branch ({code}) has been Deactivated.",
+    "code_already_existed": "The Branch's Code ({code}) has already existed.",
+    "abbreviation_is_used": "The Branch's Abbreviation ({abbreviation}) is already in use.",
+    "charts": {
+      "node_not_found": "The Branch's Chart's Node is not found.",
+      "no_action": "Submit for Approval required at least one action.",
+      "first_node_only_one": "Only One Position is allowed for the first deployment."
+    },
+    "org_chart_already_created": "{name}'s Organization Chart is already created."
+  },
+  "employees": {
+    "positions": {
+      "selected_not_found": "The Selected Position is not found.",
+      "selected_not_vacant": "The Selected Position ({title}) is not an open vacant Position.",
+      "selected_not_replaceable": "Replacing node is waiting for approval.",
+      "selected_pending": "The Selected Position ({title}) is PENDING for approval (Deployment or Movement).",
+      "move_root": "The Position ({title}) cannot change Direct Report."
+    },
+    "not_found": "The Employee is not found.",
+    "code_already_existed": "The Employee's Code ({code}) has already in use.",
+    "username_duplicated": "The Employee's Username is duplicated or already existed.",
+    "resign_submitted": "The Employee's off-boarding form is already Submitted and Approved.",
+    "redeploy_backdate": "The DoE can't be the same/before the Effective Date of Resignation."
+  }
+}

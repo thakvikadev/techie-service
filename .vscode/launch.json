@@ -1,0 +1,13 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Approval Service",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start:debug", "--", "--inspect-brk"],
+      "console": "integratedTerminal"
+    }
+  ]
+}
