@@ -1,4 +1,4 @@
-import { DatabaseModule } from '@infrastructure/io/database.module';
+import { IOModule } from '@infrastructure/io/io.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import cacheConfig from './_config/cache.config';
@@ -13,8 +13,8 @@ import { CachingModule } from './caching/caching.module';
       useFactory: (config: ConfigService) => config.get('cache'),
       inject: [ConfigService],
     }),
-    DatabaseModule,
+    IOModule,
   ],
-  exports: [DatabaseModule, CachingModule],
+  exports: [IOModule, CachingModule],
 })
 export class InfrastructureModule {}

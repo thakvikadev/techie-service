@@ -14,20 +14,14 @@ async function bootstrap() {
   app.connectMicroservice(config.get('transport'));
 
   app.use(helmet());
-  const origins = ['https://connect.ababank.com'];
+  const origins = ['https://localhost:8002'];
   if (process.env.NODE_ENV !== 'production') {
-    origins.push(
-      'http://localhost',
-      'http://localhost:4200',
-      'https://dev-hrms.ababank.com',
-      'https://uat-hrms.ababank.com',
-      'https://connect-uat.ababank.com',
-      'https://dev-hrms.ababank.com:9004',
-    );
+    origins.push('http://localhost', 'http://localhost:8002');
   }
 
   app.enableVersioning({
     type: VersioningType.URI,
+    defaultVersion: process.env.API_VERSION || '1',
   });
   app.enableCors({
     credentials: true,
@@ -44,6 +38,6 @@ async function bootstrap() {
     }),
   );
   await app.startAllMicroservices();
-  await app.listen(parseInt(process.env.PORT, 10) || 8682);
+  await app.listen(parseInt(process.env.PORT, 10) || 8002);
 }
 bootstrap();

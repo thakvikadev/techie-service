@@ -1,4 +1,3 @@
-import { NoAuth } from '@ababank/auth';
 import { Controller, Get } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -18,7 +17,6 @@ export class HealthController {
   ) {}
 
   @Get()
-  @NoAuth()
   @HealthCheck()
   check() {
     return this.health.check([

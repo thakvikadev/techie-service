@@ -5,7 +5,6 @@
 # config
 .env
 docker-compose.yml
-.npmrc
 
 # Logs
 logs

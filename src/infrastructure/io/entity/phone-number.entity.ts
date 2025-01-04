@@ -1,9 +1,8 @@
-import { DatabaseSchema } from '@constants/enum';
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
 
 @Entity({
-  schema: DatabaseSchema.PUBLIC,
+  schema: '',
   name: 'phone_numbers',
 })
 export class PhoneNumber extends BaseEntity {

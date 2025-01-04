@@ -2,6 +2,8 @@ import { InfrastructureModule } from '@infrastructure/infrastructure.module';
 import { Module } from '@nestjs/common';
 import { AcceptLanguageResolver, I18nModule, QueryResolver } from 'nestjs-i18n';
 import * as path from 'path';
+import { exportsDomain } from './export.domain';
+import { providersDomain } from './provider.domain';
 
 @Module({
   imports: [
@@ -18,8 +20,7 @@ import * as path from 'path';
     }),
     InfrastructureModule,
   ],
-  providers: [
-  ],
-  exports: [],
+  providers: providersDomain,
+  exports: exportsDomain,
 })
 export class DomainModule {}

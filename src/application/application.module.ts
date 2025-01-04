@@ -1,12 +1,5 @@
-import {
-  AuthGuard,
-  AuthModule,
-  PermissionGuard,
-  ScopeGuard,
-} from '@ababank/auth';
 import { DomainModule } from '@domain/domain.module';
 import { activityConfig } from '@infrastructure/_config/activity.config';
-import authConfig from '@infrastructure/_config/auth.config';
 import { ActivityModule } from '@infrastructure/activity/activity.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -15,8 +8,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AcceptLanguageResolver, I18nModule } from 'nestjs-i18n';
 import * as path from 'path';
-import { TestController } from './controller/test.controller';
-import { UserController } from './controller/user.controller';
+import { RoleController } from './controller/role.controller';
 import { BadRequestExceptionFilter } from './exception/filter/bad-request.filter';
 import { ErrorExceptionFilter } from './exception/filter/error.filter';
 import { HttpExceptionFilter } from './exception/filter/http.filter';
@@ -33,11 +25,11 @@ import { RequestIdInterceptor } from './interceptor/request-id.interceptor';
         limit: parseInt(config.get('RATE_LIMIT_TTL', '60')),
       }),
     }),
-    AuthModule.configAsync({
-      imports: [ConfigModule.forFeature(authConfig)],
-      useFactory: (config) => config.get('auth'),
-      inject: [ConfigService],
-    }),
+    // AuthModule.configAsync({
+    //   imports: [ConfigModule.forFeature(authConfig)],
+    //   useFactory: (config) => config.get('auth'),
+    //   inject: [ConfigService],
+    // }),
     I18nModule.forRoot({
       fallbackLanguage: process.env.FALLBACK_LOCALE || 'en',
       loaderOptions: {
@@ -49,24 +41,24 @@ import { RequestIdInterceptor } from './interceptor/request-id.interceptor';
     ActivityModule.config(activityConfig),
     DomainModule,
   ],
-  controllers: [UserController, TestController],
+  controllers: [RoleController],
   providers: [
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
-    {
-      provide: APP_GUARD,
-      useClass: AuthGuard,
-    },
-    {
-      provide: APP_GUARD,
-      useClass: PermissionGuard,
-    },
-    {
-      provide: APP_GUARD,
-      useClass: ScopeGuard,
-    },
+    // {
+    //   provide: APP_GUARD,
+    //   useClass: AuthGuard,
+    // },
+    // {
+    //   provide: APP_GUARD,
+    //   useClass: PermissionGuard,
+    // },
+    // {
+    //   provide: APP_GUARD,
+    //   useClass: ScopeGuard,
+    // },
     {
       provide: APP_INTERCEPTOR,
       useClass: RequestIdInterceptor,
