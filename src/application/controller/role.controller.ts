@@ -1,8 +1,8 @@
-import { Body, Controller, Get, Inject, Post, Req } from '@nestjs/common';
+import { NoAuth } from '@application/decorator/no-auth.decorator';
+import { Body, Controller, Get, Inject, Post } from '@nestjs/common';
 import { CreateRoleRequest } from '@requests/role.request';
 import { IRoleService, ROLE_SERVICE } from '@services/role.service';
 import { BaseController } from './base.controller';
-
 @Controller('roles')
 export class RoleController extends BaseController {
   constructor(
@@ -11,13 +11,14 @@ export class RoleController extends BaseController {
   ) {
     super(RoleController.name);
   }
+  @NoAuth()
   @Get()
   list() {
     return this.roleService.list();
   }
 
   @Post()
-  create(@Req() req: Request, @Body() body: CreateRoleRequest) {
+  create(@Body() body: CreateRoleRequest) {
     return this.roleService.create(body);
   }
 }

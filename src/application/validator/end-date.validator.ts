@@ -1,4 +1,3 @@
-
 import { Injectable } from '@nestjs/common';
 import {
   ValidationArguments,
@@ -13,7 +12,10 @@ import {
 @ValidatorConstraint({ async: true, name: 'isEndDate' })
 @Injectable()
 export class EndDateConstraints implements ValidatorConstraintInterface {
-  async validate(value: string, validationArguments?: ValidationArguments): Promise<boolean> {
+  async validate(
+    value: string,
+    validationArguments?: ValidationArguments,
+  ): Promise<boolean> {
     if (isEmpty(value)) {
       return false;
     }

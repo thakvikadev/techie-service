@@ -12,6 +12,9 @@ export class RoleRepository implements IRoleRepository {
     @InjectEntityManager()
     private readonly manager: EntityManager,
   ) {}
+  getRoleById(id: number): Promise<any> {
+    return this.manager.findOne(Role, { where: { id } });
+  }
 
   async create(query: CreateRoleQuery): Promise<any> {
     const role = new Role();

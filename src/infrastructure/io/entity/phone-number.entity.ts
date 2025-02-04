@@ -2,7 +2,7 @@ import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
 
 @Entity({
-  schema: '',
+  schema: 'techie',
   name: 'phone_numbers',
 })
 export class PhoneNumber extends BaseEntity {

@@ -5,13 +5,16 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { JwtModule } from '@nestjs/jwt';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AcceptLanguageResolver, I18nModule } from 'nestjs-i18n';
 import * as path from 'path';
-import { RoleController } from './controller/role.controller';
+import { AuthController, RoleController, UserController } from './controller';
 import { BadRequestExceptionFilter } from './exception/filter/bad-request.filter';
 import { ErrorExceptionFilter } from './exception/filter/error.filter';
 import { HttpExceptionFilter } from './exception/filter/http.filter';
+// import { AuthenticationGuard } from './guard/authentication.guard';
+// import { AuthorizationGuard } from './guard/authorization.guard';
 import { LoggingInterceptor } from './interceptor/logging.interceptor';
 import { RequestIdInterceptor } from './interceptor/request-id.interceptor';
 
@@ -30,6 +33,14 @@ import { RequestIdInterceptor } from './interceptor/request-id.interceptor';
     //   useFactory: (config) => config.get('auth'),
     //   inject: [ConfigService],
     // }),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (config) => ({
+        secret: config.get('jwt.secret'),
+      }),
+      global: true,
+      inject: [ConfigService],
+    }),
     I18nModule.forRoot({
       fallbackLanguage: process.env.FALLBACK_LOCALE || 'en',
       loaderOptions: {
@@ -41,7 +52,7 @@ import { RequestIdInterceptor } from './interceptor/request-id.interceptor';
     ActivityModule.config(activityConfig),
     DomainModule,
   ],
-  controllers: [RoleController],
+  controllers: [AuthController, RoleController, UserController],
   providers: [
     {
       provide: APP_GUARD,
@@ -49,11 +60,11 @@ import { RequestIdInterceptor } from './interceptor/request-id.interceptor';
     },
     // {
     //   provide: APP_GUARD,
-    //   useClass: AuthGuard,
+    //   useClass: AuthenticationGuard,
     // },
     // {
     //   provide: APP_GUARD,
-    //   useClass: PermissionGuard,
+    //   useClass: AuthorizationGuard,
     // },
     // {
     //   provide: APP_GUARD,

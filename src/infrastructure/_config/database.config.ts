@@ -1,7 +1,8 @@
 import { Role } from '@infrastructure/io/entity/role.entity';
+import { User } from '@infrastructure/io/entity/user.entity';
 import { registerAs } from '@nestjs/config';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
-import { toBoolean } from '@utility/utils';
+// import { toBoolean } from '@utility/utils';
 
 export default (_entities: string) =>
   registerAs(
@@ -17,10 +18,10 @@ export default (_entities: string) =>
       autoLoadEntities: true,
       synchronize: false,
       logging: false,
-      ssl: toBoolean(process.env.DB_SSL_REQUIRE)
-        ? { rejectUnauthorized: false }
-        : false,
+      // ssl: toBoolean(process.env.DB_SSL_REQUIRE)
+      //   ? { rejectUnauthorized: false }
+      //   : false,
     }),
   );
 
-export const Entities = [Role];
+export const Entities = [Role, User];
